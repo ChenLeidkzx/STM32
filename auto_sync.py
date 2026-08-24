@@ -55,10 +55,14 @@ def sync():
     if not run(["git", "commit", "-m", COMMIT_MSG]):
         print("! git commit 失败")
         return
-    # 3. 推送到远程
-    if not run(["git", "push"]):
-        print("! git push 失败（请检查网络/凭据，改动已保存在本地提交中）")
-    print("✓ 已同步到 GitHub")
+    # 3. 推送到远程；若远程有新提交，先拉取合并再重试
+    for attempt in range(3):
+        if run(["git", "push"]):
+            print("✓ 已同步到 GitHub")
+            return
+        print("→ 远程有新提交，正在拉取合并后重试...")
+        run(["git", "pull", "--rebase", "origin", "main"])
+    print("! git push 多次失败（请检查网络/凭据，改动已保存在本地提交中）")
 
 
 class Handler(FileSystemEventHandler):
