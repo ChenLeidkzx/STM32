@@ -1,1 +1,1 @@
-print("Auto-sync is working!")
+print("Auto-sync v2!")
