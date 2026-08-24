@@ -15,6 +15,7 @@
 
 import os
 import sys
+from datetime import date
 
 # 让程序能找到同目录下的算法和数据文件
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -25,8 +26,16 @@ from review_algorithm import is_due_to_review, get_review_days
 
 app = Flask(__name__)
 
-# 今天是第几天（演示用固定值；正式可改成从日期计算）
-TODAY = 3
+# 项目开始日期（记为第 0 天），从这里算起"今天是第几天"
+PROJECT_START = date(2026, 8, 1)
+
+
+def get_today():
+    """计算今天是项目的第几天。"""
+    return (date.today() - PROJECT_START).days
+
+
+TODAY = get_today()
 
 
 @app.route("/")
