@@ -1,1 +1,1 @@
-print("Hello, World!")
+print("Auto-sync is working!")
