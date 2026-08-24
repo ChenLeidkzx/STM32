@@ -48,7 +48,7 @@ def info(msg):
 
 # ---------- 配置 ----------
 # 忽略的目录/文件，避免把缓存也提交上去
-IGNORE = {".git", "__pycache__", ".DS_Store", "auto_sync.py"}
+IGNORE = {".git", "__pycache__", ".DS_Store", "sync.py"}
 # 防抖时间（秒）：文件连续变化时，等安静下来再提交
 DEBOUNCE = 3.0
 # 提交说明
