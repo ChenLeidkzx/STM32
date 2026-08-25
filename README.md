@@ -48,12 +48,12 @@ nohup python3 sync.py > sync.log 2>&1 &
 
 ### 小提醒
 
-- 提交说明是固定写的 `auto-sync: update files`，偷懒用的，想看每次改了什么还是得看 commit 里的文件列表。
+- 提交说明固定写的 `auto-sync: update files`，偷懒用的，想看每次改了什么还是得看 commit 里的文件列表。
 - 它会忽略 `__pycache__`、`.DS_Store` 这类缓存文件，不会把这些垃圾也传上去。
 - 第一次跑之前要先把 Git 和远程仓库（`origin`）配好，不然它没地方推。
 
 ### 隐私说明
 
-- 脚本里不会保存你的密码、GitHub 令牌等任何敏感信息，登录靠系统钥匙串（credential helper）。
+- 脚本里不会保存你的GitHub 令牌等任何敏感信息，登录靠系统钥匙串（credential helper）。
 - `.gitignore` 里列了一堆常见敏感文件（`.env`、`*.pem`、`*.key`、`token*` 等），这些就算出现在本地也不会被提交上去。
 
