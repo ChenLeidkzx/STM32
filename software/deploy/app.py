@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""阳光伴学助手的最小云端服务。"""
+"""阳光伴学助手云端服务。"""
 
 from flask import Flask, jsonify, render_template
 
@@ -13,7 +13,7 @@ def index():
 
 @app.route("/health")
 def health():
-    """提供给浏览器或监控工具的健康检查接口。"""
+    """返回服务器健康状态。"""
     return jsonify({"ok": True, "service": "sunshine-study-assistant"})
 
 

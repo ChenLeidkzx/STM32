@@ -1,46 +1,26 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-一键部署到云端脚本
-====================
-作用：把本地 software/deploy/ 的代码打包并推送到 GitHub，
-      然后在 PythonAnywhere 里粘贴一条命令就能更新云端。
-
-为什么这样设计：
-    你已经有 sync.py 自动同步 GitHub。我们把部署包也推上 GitHub，
-    然后在 PythonAnywhere 的 Bash 里用 curl 下载 + 解压 + 覆盖，
-    就完成了"改代码 → 更新云端"的整个流程。
-
-用法：
-    python3 deploy_to_cloud.py
-之后：
-    1. 打开 PythonAnywhere → Consoles → Bash
-    2. 粘贴脚本打印的那条命令
-    3. 回到 Web 页面点 Reload
-"""
+"""打包云端程序并推送到 GitHub，输出 PythonAnywhere 更新命令。"""
 
 import os
 import sys
 import subprocess
 import zipfile
 
-# ---------- 路径 ----------
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 项目根目录
-DEPLOY = os.path.join(ROOT, "software", "deploy")                   # 要部署的代码
-ZIP_NAME = "cloud_deploy.zip"                                       # 打包文件名
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEPLOY = os.path.join(ROOT, "software", "deploy")
+ZIP_NAME = "cloud_deploy.zip"
 ZIP_PATH = os.path.join(ROOT, ZIP_NAME)
 
-# GitHub 仓库（改成你自己的，注意是公开仓库才能 curl 下载）
 GITHUB_REPO = "ChenLeidkzx/STM32"
-# 注意：要用 raw.githubusercontent.com 这个地址，github.com/.../raw 会 302 重定向导致失败
 RAW_URL = f"https://raw.githubusercontent.com/{GITHUB_REPO}/main/{ZIP_NAME}"
 
-# 打包时排除的文件（缓存和数据文件不能覆盖云端的真实数据）
+# 不覆盖缓存、数据和日志文件。
 SKIP_FILES = {"__pycache__", "wrong_questions.json", "server.log"}
 
 
 def pack():
-    """把 deploy 目录打包成 zip，结构为 app/..."""
+    """把 deploy 目录打包为 app/... 结构。"""
     print("[1/3] 正在打包代码...")
     with zipfile.ZipFile(ZIP_PATH, "w", zipfile.ZIP_DEFLATED) as zf:
         for folder, _, files in os.walk(DEPLOY):
@@ -54,7 +34,7 @@ def pack():
 
 
 def git_push():
-    """把 zip 提交并推送到 GitHub"""
+    """提交并推送部署包。"""
     print("[2/3] 正在推送到 GitHub...")
     for cmd in (
         ["git", "add", ZIP_NAME],
@@ -66,13 +46,12 @@ def git_push():
         if out:
             print("      " + out.splitlines()[-1] if out else "")
         if r.returncode != 0:
-            # git commit 没有变化时会返回非0，属于正常，继续
             pass
     print("      已推送到 GitHub")
 
 
 def show_instructions():
-    """打印在 PythonAnywhere Bash 里要执行的命令"""
+    """输出 PythonAnywhere 更新命令。"""
     print("[3/3] 请按下面 2 步操作完成云端更新：")
     print()
     print("=" * 70)
