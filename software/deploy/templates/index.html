@@ -3,25 +3,148 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>阳光伴学助手 · 云端</title>
+    <title>阳光伴学助手 · 登录</title>
     <style>
-         body { font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
-             max-width: 720px; margin: 0 auto; padding: 72px 24px;
-             background: #f4f7f5; color: #18352d; }
-         .panel { background: #fff; border: 1px solid #d7e4dd;
-               border-radius: 8px; padding: 32px; box-shadow: 0 12px 30px rgba(24, 53, 45, .08); }
-         h1 { margin-top: 0; font-size: 30px; }
-         .status { color: #24724e; font-weight: bold; }
-         .hint { color: #60756c; line-height: 1.8; }
-         code { background: #edf5ef; padding: 3px 7px; border-radius: 4px; }
+        body {
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 60px 20px;
+            background: #f4f7f5;
+            color: #18352d;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+        .panel {
+            background: #fff;
+            border: 1px solid #d7e4dd;
+            border-radius: 12px;
+            padding: 28px;
+            box-shadow: 0 12px 30px rgba(24, 53, 45, .08);
+        }
+        h1, h2 { margin-top: 0; }
+        input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 12px 14px;
+            margin: 10px 0 16px;
+            border: 1px solid #cfe0d8;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        button {
+            width: 100%;
+            border: none;
+            border-radius: 8px;
+            background: #2b7a5a;
+            color: white;
+            padding: 12px 14px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button:hover { background: #23664d; }
+        .status {
+            margin-top: 18px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            background: #edf7f1;
+            color: #1a6242;
+            display: none;
+        }
+        .status.error {
+            background: #fff1f0;
+            color: #a63b35;
+        }
+        .hint {
+            color: #60756c;
+            line-height: 1.8;
+        }
+        code { background: #edf5ef; padding: 3px 7px; border-radius: 4px; }
+        @media (max-width: 760px) {
+            .container { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
-    <main class="panel">
-        <h1>阳光伴学助手</h1>
-        <p class="status">● 云端服务器运行正常</p>
-        <p class="hint">Flask 云端服务已成功启动，可以作为 STM32 与云端协同项目的服务器端。</p>
-        <p class="hint">健康检查：<code>/health</code></p>
+    <main class="container">
+        <section class="panel">
+            <h1>阳光伴学助手</h1>
+            <p class="hint">云端多用户系统已启用。先注册账号，再登录使用。</p>
+            <p class="hint">健康检查：<code>/health</code></p>
+            <div id="status" class="status"></div>
+        </section>
+
+        <section class="panel">
+            <h2>注册</h2>
+            <form id="registerForm">
+                <label>用户名</label>
+                <input type="text" id="registerUsername" placeholder="例如：alice" required>
+                <label>密码</label>
+                <input type="password" id="registerPassword" placeholder="至少 6 位" required>
+                <button type="submit">注册</button>
+            </form>
+
+            <hr style="margin: 24px 0; border: 0; border-top: 1px solid #e1ece5;">
+
+            <h2>登录</h2>
+            <form id="loginForm">
+                <label>用户名</label>
+                <input type="text" id="loginUsername" placeholder="用户名" required>
+                <label>密码</label>
+                <input type="password" id="loginPassword" placeholder="密码" required>
+                <button type="submit">登录</button>
+            </form>
+        </section>
     </main>
+
+    <script>
+        function showStatus(message, isError = false) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.style.display = 'block';
+            status.classList.toggle('error', isError);
+        }
+
+        async function sendJson(url, payload) {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || '请求失败');
+            }
+            return data;
+        }
+
+        document.getElementById('registerForm').addEventListener('submit', async function (event) {
+            event.preventDefault();
+            try {
+                const username = document.getElementById('registerUsername').value.trim();
+                const password = document.getElementById('registerPassword').value;
+                const result = await sendJson('/register', { username, password });
+                showStatus('注册成功：' + result.user.username + '，token 已生成');
+            } catch (error) {
+                showStatus(error.message, true);
+            }
+        });
+
+        document.getElementById('loginForm').addEventListener('submit', async function (event) {
+            event.preventDefault();
+            try {
+                const username = document.getElementById('loginUsername').value.trim();
+                const password = document.getElementById('loginPassword').value;
+                const result = await sendJson('/login', { username, password });
+                localStorage.setItem('sunshine_token', result.token);
+                showStatus('登录成功：' + result.user.username + '，已保存 token');
+            } catch (error) {
+                showStatus(error.message, true);
+            }
+        });
+    </script>
 </body>
 </html>
