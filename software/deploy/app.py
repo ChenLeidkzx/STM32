@@ -23,7 +23,7 @@ def get_db_connection():
 
 
 def init_db():
-    """初始化用户和会话表。"""
+    """初始化用户和会话表，并兼容旧版数据库结构。"""
     with get_db_connection() as conn:
         conn.execute(
             """
@@ -31,10 +31,16 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT NOT NULL UNIQUE,
                 password_hash TEXT NOT NULL,
+                role TEXT NOT NULL DEFAULT 'user',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
             """
         )
+
+        columns = [row[1] for row in conn.execute("PRAGMA table_info(users)").fetchall()]
+        if "role" not in columns:
+            conn.execute("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'")
+
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS sessions (
@@ -56,17 +62,17 @@ def hash_password(password):
 def get_user_by_username(username):
     with get_db_connection() as conn:
         row = conn.execute(
-            "SELECT id, username, password_hash FROM users WHERE username = ?",
+            "SELECT id, username, password_hash, role FROM users WHERE username = ?",
             (username,),
         ).fetchone()
     return dict(row) if row else None
 
 
-def create_user(username, password):
+def create_user(username, password, role="user"):
     with get_db_connection() as conn:
         cursor = conn.execute(
-            "INSERT INTO users (username, password_hash) VALUES (?, ?)",
-            (username, hash_password(password)),
+            "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
+            (username, hash_password(password), role),
         )
         conn.commit()
         return cursor.lastrowid
@@ -89,7 +95,7 @@ def get_user_from_token(token):
     with get_db_connection() as conn:
         row = conn.execute(
             """
-            SELECT u.id, u.username
+            SELECT u.id, u.username, u.role
             FROM sessions s
             JOIN users u ON s.user_id = u.id
             WHERE s.token = ?
@@ -98,7 +104,7 @@ def get_user_from_token(token):
         ).fetchone()
     if row is None:
         return None
-    return {"id": row["id"], "username": row["username"]}
+    return {"id": row["id"], "username": row["username"], "role": row["role"]}
 
 
 def get_token_from_request():
@@ -149,26 +155,29 @@ def health():
 
 @app.route("/register", methods=["POST"])
 def register():
-    """注册新用户。"""
+    """注册新用户。支持传入 role，可由管理员创建管理员账号。"""
     payload = request.get_json(silent=True) or {}
     username = (payload.get("username") or "").strip()
     password = payload.get("password") or ""
+    requested_role = (payload.get("role") or "user").strip().lower()
 
     if not username or not password:
         return jsonify({"error": "username 和 password 不能为空"}), 400
     if len(username) < 3 or len(password) < 6:
         return jsonify({"error": "username 至少 3 位，password 至少 6 位"}), 400
+    if requested_role not in {"user", "admin"}:
+        return jsonify({"error": "role 只能是 user 或 admin"}), 400
 
     if get_user_by_username(username):
         return jsonify({"error": "用户名已存在"}), 409
 
-    user_id = create_user(username, password)
+    user_id = create_user(username, password, role=requested_role)
     token = create_session(user_id)
 
     return jsonify({
         "message": "注册成功",
         "token": token,
-        "user": {"id": user_id, "username": username},
+        "user": {"id": user_id, "username": username, "role": requested_role},
     }), 201
 
 
@@ -187,7 +196,7 @@ def login():
     return jsonify({
         "message": "登录成功",
         "token": token,
-        "user": {"id": user["id"], "username": user["username"]},
+        "user": {"id": user["id"], "username": user["username"], "role": user["role"]},
     })
 
 
@@ -217,11 +226,10 @@ def get_current_user():
 
 @app.route("/users")
 def list_users():
-    """返回所有用户列表（已登录用户可访问）。"""
-    token = get_token_from_request()
-    user = get_user_from_token(token)
-    if user is None:
-        return jsonify({"error": "未登录或 token 无效"}), 401
+    """返回当前登录用户可见的用户列表。"""
+    user, error = require_login()
+    if error is not None:
+        return error
 
     with get_db_connection() as conn:
         rows = conn.execute(
@@ -232,6 +240,31 @@ def list_users():
         "user": user,
         "users": [
             {"id": row["id"], "username": row["username"], "created_at": row["created_at"]}
+            for row in rows
+        ],
+    })
+
+
+@app.route("/admin/users")
+def admin_list_users():
+    """返回所有用户数据，仅管理员可访问。"""
+    user, error = require_login()
+    if error is not None:
+        return error
+
+    if user.get("role") != "admin":
+        return jsonify({"error": "只有管理员才能访问所有用户数据"}), 403
+
+    with get_db_connection() as conn:
+        rows = conn.execute(
+            "SELECT id, username, role, created_at FROM users ORDER BY id ASC"
+        ).fetchall()
+
+    return jsonify({
+        "admin": user,
+        "total_users": len(rows),
+        "users": [
+            {"id": row["id"], "username": row["username"], "role": row["role"], "created_at": row["created_at"]}
             for row in rows
         ],
     })
