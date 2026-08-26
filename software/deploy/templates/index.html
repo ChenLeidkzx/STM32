@@ -260,22 +260,29 @@
                     method: 'GET',
                     headers: { Authorization: `Bearer ${token}` }
                 });
-                renderUserCard(result.user);
-                document.getElementById('dashboard').style.display = 'grid';
-                document.getElementById('authPanel').style.display = 'none';
-                await loadStudyLogs();
-                if (result.user.role === 'admin') {
-                    document.getElementById('adminSection').style.display = 'block';
-                    await loadAdminUsers();
-                } else {
-                    document.getElementById('adminSection').style.display = 'none';
-                }
+                await enterDashboard(result);
                 return true;
             } catch (error) {
                 clearToken();
                 document.getElementById('dashboard').style.display = 'none';
                 document.getElementById('authPanel').style.display = 'grid';
                 return false;
+            }
+        }
+
+        async function enterDashboard(result, message) {
+            saveToken(result.token || getToken());
+            renderUserCard(result.user);
+            document.getElementById('dashboard').style.display = 'grid';
+            document.getElementById('authPanel').style.display = 'none';
+            document.getElementById('adminSection').style.display =
+                result.user.role === 'admin' ? 'block' : 'none';
+            if (message) {
+                showStatus(message);
+            }
+            await loadStudyLogs();
+            if (result.user.role === 'admin') {
+                await loadAdminUsers();
             }
         }
 
@@ -314,16 +321,7 @@
                     method: 'POST',
                     body: JSON.stringify({ username, password, role })
                 });
-                saveToken(result.token);
-                renderUserCard(result.user);
-                showStatus('注册成功：' + result.user.username + '（' + result.user.role + '）');
-                document.getElementById('dashboard').style.display = 'grid';
-                document.getElementById('authPanel').style.display = 'none';
-                await loadStudyLogs();
-                if (result.user.role === 'admin') {
-                    document.getElementById('adminSection').style.display = 'block';
-                    await loadAdminUsers();
-                }
+                await enterDashboard(result, '注册成功：' + result.user.username + '（' + result.user.role + '）');
             } catch (error) {
                 showStatus(error.message, true);
             }
@@ -338,16 +336,7 @@
                     method: 'POST',
                     body: JSON.stringify({ username, password })
                 });
-                saveToken(result.token);
-                renderUserCard(result.user);
-                showStatus('登录成功：' + result.user.username + '（' + result.user.role + '）');
-                document.getElementById('dashboard').style.display = 'grid';
-                document.getElementById('authPanel').style.display = 'none';
-                await loadStudyLogs();
-                if (result.user.role === 'admin') {
-                    document.getElementById('adminSection').style.display = 'block';
-                    await loadAdminUsers();
-                }
+                await enterDashboard(result, '登录成功：' + result.user.username + '（' + result.user.role + '）');
             } catch (error) {
                 showStatus(error.message, true);
             }

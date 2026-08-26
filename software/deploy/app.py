@@ -13,6 +13,7 @@ DB_PATH = os.path.join(BASE_DIR, "users.db")
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "sunshine-study-assistant-secret-key"
+STUDY_LOG_FIELDS = "id, user_id, title, content, created_at, updated_at"
 
 
 def get_db_connection():
@@ -291,7 +292,7 @@ def add_study_log():
         )
         conn.commit()
         row = conn.execute(
-            "SELECT id, user_id, title, content, created_at, updated_at FROM study_logs WHERE id = ?",
+            f"SELECT {STUDY_LOG_FIELDS} FROM study_logs WHERE id = ?",
             (cursor.lastrowid,),
         ).fetchone()
 
@@ -310,7 +311,7 @@ def list_study_logs():
 
     with get_db_connection() as conn:
         rows = conn.execute(
-            "SELECT id, user_id, title, content, created_at, updated_at FROM study_logs WHERE user_id = ? ORDER BY created_at DESC",
+            f"SELECT {STUDY_LOG_FIELDS} FROM study_logs WHERE user_id = ? ORDER BY created_at DESC",
             (user["id"],),
         ).fetchall()
 
@@ -329,7 +330,7 @@ def study_log_detail(log_id):
 
     with get_db_connection() as conn:
         row = conn.execute(
-            "SELECT id, user_id, title, content, created_at, updated_at FROM study_logs WHERE id = ? AND user_id = ?",
+            f"SELECT {STUDY_LOG_FIELDS} FROM study_logs WHERE id = ? AND user_id = ?",
             (log_id, user["id"]),
         ).fetchone()
 
@@ -356,7 +357,7 @@ def study_log_detail(log_id):
         )
         conn.commit()
         updated = conn.execute(
-            "SELECT id, user_id, title, content, created_at, updated_at FROM study_logs WHERE id = ?",
+            f"SELECT {STUDY_LOG_FIELDS} FROM study_logs WHERE id = ?",
             (log_id,),
         ).fetchone()
         return jsonify({"message": "学习记录已更新", "log": row_to_log(updated)})
