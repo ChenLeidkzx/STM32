@@ -9,7 +9,6 @@
 ## 仓库里有什么
 
 ```
-sync.py     自动提交脚本（见下）
 README.md   本说明文件
 .gitignore  告诉 git 哪些文件不上传
 ```
@@ -20,40 +19,4 @@ README.md   本说明文件
 ```bash
 python3 -c "print('Hello, World!')"
 ```
-
-## 自动提交 GitHub：不用动手的 sync.py
-
-写代码的时候老是忘记手动 push，改完又忘了保存到 GitHub，很烦。
-所以折腾了一个小脚本 `sync.py`，让 GitHub 自己"跟屁虫"一样跟着更新。
-
-### 它是怎么想的
-
-其实思路很简单，就三步：
-
-1. **盯着文件夹** —— 用 Python 的 `watchdog` 库一直监视当前文件夹，只要文件有变动（保存、新建、删除）它就知道。
-2. **自动跑 git** —— 一发现有变化，就用 `subprocess` 去敲命令行，依次执行 `git add`、`git commit`、`git push`，把改动推到 GitHub。
-3. **防抖和兜底** —— 连续保存时不急着提交（等 3 秒冷静一下，免得提交记录刷屏）；要是 GitHub 上刚好有新东西导致推送被拒，它会自己先拉下来合并，再重试，最多试 3 次。
-
-### 怎么用
-
-```bash
-# 前台跑，能看到实时日志（Ctrl+C 停止）
-python3 sync.py
-
-# 后台跑，关掉终端也不停
-nohup python3 sync.py > sync.log 2>&1 &
-```
-
-跑起来之后正常写代码就行，保存文件几秒内 GitHub 就会自动更新。
-
-### 小提醒
-
-- 提交说明固定写的 `auto-sync: update files`，偷懒用的，想看每次改了什么还是得看 commit 里的文件列表。
-- 它会忽略 `__pycache__`、`.DS_Store` 这类缓存文件，不会把这些垃圾也传上去。
-- 第一次跑之前要先把 Git 和远程仓库（`origin`）配好，不然它没地方推。
-
-### 隐私说明
-
-- 脚本里不会保存你的GitHub 令牌等任何敏感信息，登录靠系统钥匙串（credential helper）。
-- `.gitignore` 里列了一堆常见敏感文件（`.env`、`*.pem`、`*.key`、`token*` 等），这些就算出现在本地也不会被提交上去。
 
