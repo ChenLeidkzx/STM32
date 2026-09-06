@@ -1,0 +1,48 @@
+name: Daily Idea Commit
+
+# ============================================================================
+# 每天自动向 GitHub 提交一条“今日想法”日志（保证仓库每天都有一次提交记录）。
+#
+# 说明：
+#  - schedule 使用 UTC 时间，这里为每天 16:00 UTC = 北京时间每天 00:00。
+#    想改时间只需改下方 cron（注意 GitHub 的 cron 按 UTC，北京 = UTC + 8）。
+#  - workflow_dispatch：可在仓库 Actions 页面手动点击 “Run workflow” 立即生成/补一次。
+#  - 同一天重复运行不会重复提交（脚本幂等），保证每天至多新增一次提交。
+# ============================================================================
+on:
+  schedule:
+    - cron: "0 16 * * *"   # 每天 UTC 16:00 = 北京时间 00:00
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-idea
+  cancel-in-progress: false
+
+jobs:
+  daily-idea:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate today's idea note
+        run: python3 .github/scripts/daily_idea.py
+
+      - name: Commit and push
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "今日想法日志已存在或无需变更，跳过提交（保持每天一次）"
+            exit 0
+          fi
+          git commit -m "docs(daily): 添加 $(TZ=Asia/Shanghai date +%Y-%m-%d) 项目想法日志"
+          git pull --rebase origin main
+          git push origin main

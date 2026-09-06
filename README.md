@@ -9,8 +9,11 @@
 ## 仓库里有什么
 
 ```
-README.md   本说明文件
-.gitignore  告诉 git 哪些文件不上传
+README.md              本说明文件
+.gitignore             告诉 git 哪些文件不上传
+daily-ideas/           每日项目想法日志（GitHub Actions 自动生成）
+.github/workflows/     GitHub Actions 定时任务定义
+.github/scripts/       自动生成日志用的脚本
 ```
 
 > 之前有个 `test.py`，就一行打印测试，没啥用，就并进这个 README 里了。
@@ -21,6 +24,24 @@ python3 -c "print('Hello, World!')"
 ```
 
 ## 项目调整记录
+
+### 2026-09-06：新增 GitHub Actions 每日想法日志自动提交
+
+为便于逐日记录对项目的想法与进展，新增了一套“每天自动提交一条想法日志”的机制：
+
+- **触发方式**：`.github/workflows/daily-idea.yml`，每天北京时间 00:00（UTC 16:00）由
+  GitHub Actions 云端定时触发一次，也可在 Actions 页面手动 “Run workflow” 补跑。
+- **生成内容**：`.github/scripts/daily_idea.py` 在 `daily-ideas/YYYY-MM-DD.md` 中生成当天的
+  想法日志（含当天推送到 main 的提交摘要 + “今日想法”占位栏），随后自动 commit 并 push。
+- **每天至多一次提交**：脚本按日期幂等，同一天重复触发不会产生第二条提交。
+- **适用场景**：适合需要“仓库每天都有一次提交记录”或想长期积累开发日志的场景；
+  电脑不关机也能运行，因为执行发生在 GitHub 云端。
+- **限制与注意**：
+  - 想法栏默认内容为“暂无新增想法”，需要你在有空时回填真实想法后再提交一次。
+  - 依赖 GitHub Actions 与仓库的 push 权限；若仓库持续 60 天完全无活动，GitHub 会
+    暂停定时触发（本机制每天有提交，通常不会触发此限制）。
+  - 修改提交时间请改 workflow 里的 `cron`（按 UTC，北京 = UTC + 8）。
+  - 本地 `sync.py`（监听文件变化自动同步）不参与本机制，两者相互独立。
 
 ### 2026-08-29：移除 GitHub 自动同步功能
 
